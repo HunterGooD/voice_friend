@@ -1,0 +1,6 @@
+
+gocritic:
+	gocritic check -disable='#style' ./...
+
+gosec:
+	gosec ./...
