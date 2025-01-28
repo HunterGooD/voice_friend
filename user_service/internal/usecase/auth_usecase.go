@@ -10,24 +10,23 @@ type UserRepository interface {
 	AddUser(ctx context.Context)
 }
 
-// TODO: rename functions
 type TokenManager interface {
 	GenerateAllTokens(ctx context.Context, uid string, roles []string) ([]string, error)
 	GenerateAccessToken(ctx context.Context, uid string, roles []string) (string, error)
 	GenerateRefreshToken(ctx context.Context, uid string, roles []string) (string, error)
 }
 
-type UserUsecase struct {
+type AuthUsecase struct {
 	ur UserRepository
 	tm TokenManager
 
 	log logger.Logger
 }
 
-func NewUserUsecase(ur UserRepository, tm TokenManager, log logger.Logger) *UserUsecase {
-	return &UserUsecase{ur, tm, log}
+func NewAuthUsecase(ur UserRepository, tm TokenManager, log logger.Logger) *AuthUsecase {
+	return &AuthUsecase{ur, tm, log}
 }
 
-func (uu *UserUsecase) AddUser(ctx context.Context) {
+func (uu *AuthUsecase) RegisterUserusecase(ctx context.Context) {
 
 }

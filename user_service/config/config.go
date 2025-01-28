@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"time"
 
@@ -58,4 +59,20 @@ func NewConfig(file_name string) (*Config, error) {
 	}
 
 	return &config, nil
+}
+
+// TODO: build on cfg param driver
+func (c *Config) BuildDSN() string {
+	return fmt.Sprintf("postgresql://%s:%s@%s:%s/%s?sslmode=%s",
+		c.Database.User,
+		c.Database.Password,
+		c.Database.Host,
+		c.Database.Port,
+		c.Database.DBName,
+		c.Database.SSLMode,
+	)
+}
+
+func (c *Config) GetAddress() string {
+	return fmt.Sprintf("%s:%s", c.Server.Host, c.Server.Port)
 }

@@ -24,8 +24,8 @@ type AuthClaims struct {
 	jwt.RegisteredClaims
 }
 
-func NewJWTGenerator(filePath, issuer string, accessToken, refreshToken time.Duration, audience []string) (*JWT, error) {
-	keyData, err := os.ReadFile(filePath)
+func NewJWTGenerator(certPath, issuer string, accessToken, refreshToken time.Duration, audience []string) (*JWT, error) {
+	keyData, err := os.ReadFile(certPath)
 	if err != nil {
 		return nil, err
 	}

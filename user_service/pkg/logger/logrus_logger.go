@@ -32,6 +32,8 @@ func NewJsonLogrusLogger(w io.Writer, log_level string) *logrusLogger {
 		log.SetLevel(logrus.InfoLevel)
 	case "DEBUG":
 		log.SetLevel(logrus.DebugLevel)
+	default:
+		log.SetLevel(logrus.DebugLevel)
 	}
 	log.SetFormatter(&logrus.JSONFormatter{})
 

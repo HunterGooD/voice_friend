@@ -17,10 +17,10 @@ func NewUserRepository(conn *sqlx.DB) *UserRepository {
 	}
 }
 
-func (u *UserRepository) WithTransaction(tx *sqlx.Tx) *UserRepository {
-	return &UserRepository{u.db, tx}
+func (ur *UserRepository) WithTransaction(tx *sqlx.Tx) *UserRepository {
+	return &UserRepository{ur.db, tx}
 }
 
-func AddUser(ctx context.Context) {
+func (ur *UserRepository) AddUser(ctx context.Context) {
 
 }

@@ -18,7 +18,7 @@ database:
   pool_connection:
     max_open_conns: 25
     max_idle_conns: 25
-    max_life_time: 5
+    max_life_time: 5 # minutes
 jwt:
   accessTokenDuration:  5  # minutes
   refreshTokenDuration: 30 # days
