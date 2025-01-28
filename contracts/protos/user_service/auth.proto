@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package auth;
+
+option go_package = "github.com/HunterGooD/voice_friend/contracts;user_service";
+
+service Auth {
+    rpc Register (RegisterRequest) returns (AuthResponse);
+    rpc Login (LoginRequest) returns (AuthResponse);
+    rpc LogOut (LogoutRequest) returns (LogoutResponse);
+}
+
+message RegisterRequest {
+    string login = 1;
+    string name = 2;
+    string password = 3;
+    optional string email = 4;
+    optional string phone = 5;
+    optional string profile_picture = 6;
+}
+
+message LoginRequest {
+    string login = 1;
+    string password = 2;
+    optional string email = 3;
+    optional string phone = 4;
+}
+
+message AuthResponse {
+    string access_token = 1;
+    string refresh_token = 2;
+}
+
+message LogoutRequest {
+    string access_token = 1;
+    string refresh_token = 2;
+}
+  
+message LogoutResponse {
+    bool success = 1;
+}

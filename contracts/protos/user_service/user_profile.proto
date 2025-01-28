@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package user_profile;
+
+option go_package = "github.com/HunterGooD/voice_friend/contracts;user_service";
+
+service UserProfile {
+    rpc ChangeAvatar(AvatarChangeRequest) returns (AvatarChangeResponse);
+}
+
+message AvatarChangeRequest {
+    string uuid = 1;
+    string avatar_path = 2;
+    optional Rect region_avatar = 3;
+}
+
+message Rect {
+    float x = 1;
+    float y = 2;
+    float weight = 3;
+    float height = 4;
+}
+
+message AvatarChangeResponse {
+    string avatar_url = 1;
+}
