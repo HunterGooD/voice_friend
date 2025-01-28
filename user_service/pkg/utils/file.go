@@ -18,7 +18,7 @@ func FileExist(basePath, filePath string) (bool, error) {
 func GetFullPath(basePath, filePath string) (string, error) {
 	const NameFunc = "utils.GetFullPath"
 	var err error
-	if len(basePath) == 0 {
+	if basePath == "" {
 		basePath, err = os.Getwd()
 		if err != nil {
 			return "", fmt.Errorf("%s: failed to get current dir: %w", NameFunc, err)

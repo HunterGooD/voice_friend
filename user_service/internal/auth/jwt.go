@@ -55,7 +55,7 @@ func (j *JWT) GenerateAccessToken(ctx context.Context, uid string, roles []strin
 		},
 	}
 
-	signedToken, err := j.generateJWT(ctx, claims)
+	signedToken, err := j.generateJWT(ctx, &claims)
 
 	return signedToken, err
 }
@@ -73,12 +73,12 @@ func (j *JWT) GenerateRefreshToken(ctx context.Context, uid string, roles []stri
 		},
 	}
 
-	signedToken, err := j.generateJWT(ctx, claims)
+	signedToken, err := j.generateJWT(ctx, &claims)
 
 	return signedToken, err
 }
 
-func (j *JWT) generateJWT(ctx context.Context, claims AuthClaims) (string, error) {
+func (j *JWT) generateJWT(ctx context.Context, claims *AuthClaims) (string, error) {
 	if ctx.Err() != nil {
 		return "", ctx.Err()
 	}
