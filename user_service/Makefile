@@ -1,0 +1,9 @@
+
+gocriticDS:
+	gocritic check -enableAll -disable='#style' ./...
+
+gocritic:
+	gocritic check -enableAll ./...
+
+gosec:
+	gosec ./...
