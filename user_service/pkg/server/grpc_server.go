@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"net"
 	"os"
 	"os/signal"
@@ -8,7 +9,12 @@ import (
 	"time"
 
 	"github.com/HunterGooD/voice_friend/user_service/pkg/logger"
+	grpclog "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
+
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type GRPCServer struct {
@@ -16,8 +22,22 @@ type GRPCServer struct {
 	log    logger.Logger
 }
 
-func NewGRPCServer(log logger.Logger) *GRPCServer {
-	server := grpc.NewServer()
+func NewGRPCServer(log logger.Logger, retriesCount int, timeout time.Duration) *GRPCServer {
+	recoveryOpts := []recovery.Option{
+		recovery.WithRecoveryHandler(func(p interface{}) (err error) {
+			log.Error("Recovered from panic", map[string]any{"panic": p})
+			return status.Errorf(codes.Internal, "internal error")
+		}),
+	}
+	loggingOpts := []grpclog.Option{
+		grpclog.WithLogOnEvents(
+			grpclog.PayloadReceived, grpclog.PayloadSent,
+		),
+	}
+	server := grpc.NewServer(grpc.ChainUnaryInterceptor(
+		recovery.UnaryServerInterceptor(recoveryOpts...),
+		grpclog.UnaryServerInterceptor(interceptorLogger(log), loggingOpts...),
+	))
 	return &GRPCServer{server, log}
 }
 
@@ -62,4 +82,19 @@ func (s *GRPCServer) Start(address string) error {
 
 func (s *GRPCServer) GetServer() *grpc.Server {
 	return s.server
+}
+
+func interceptorLogger(l logger.Logger) grpclog.Logger {
+	return grpclog.LoggerFunc(func(ctx context.Context, lvl grpclog.Level, msg string, fields ...any) {
+		switch lvl {
+		case grpclog.LevelDebug:
+			l.Debug(msg, fields...)
+		case grpclog.LevelInfo:
+			l.Info(msg, fields...)
+		case grpclog.LevelWarn:
+			l.Warn(msg, fields...)
+		case grpclog.LevelError:
+			l.Error(msg, fields...)
+		}
+	})
 }

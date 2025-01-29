@@ -6,6 +6,7 @@ require (
 	github.com/HunterGooD/voice_friend_contracts v0.0.0-20250129065518-7f5c9c8aef3b
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/uuid v1.6.0
+	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.2.0
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/lib/pq v1.10.9
 	github.com/pkg/errors v0.9.1

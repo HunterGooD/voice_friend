@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"time"
 
 	"github.com/HunterGooD/voice_friend/user_service/config"
 	"github.com/HunterGooD/voice_friend/user_service/internal/auth"
@@ -52,7 +53,7 @@ func main() {
 	userProfileUsecase := usecase.NewUserProfileUsecase(userRepository, tokenManager, log)
 
 	// init gRPC server
-	gRPCServer := server.NewGRPCServer(log)
+	gRPCServer := server.NewGRPCServer(log, 5, time.Duration(30)*time.Second)
 
 	// register handlers
 	handler.NewAuthHandler(gRPCServer, authUsecase, log)

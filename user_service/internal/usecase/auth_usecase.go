@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 
+	"github.com/HunterGooD/voice_friend/user_service/internal/domain/entity"
 	"github.com/HunterGooD/voice_friend/user_service/pkg/logger"
 )
 
@@ -27,6 +28,7 @@ func NewAuthUsecase(ur UserRepository, tm TokenManager, log logger.Logger) *Auth
 	return &AuthUsecase{ur, tm, log}
 }
 
-func (uu *AuthUsecase) RegisterUserusecase(ctx context.Context) {
+func (uu *AuthUsecase) RegisterUserUsecase(ctx context.Context, user *entity.User) (*entity.AuthUserResponse, error) {
 
+	return nil, nil
 }
