@@ -3,9 +3,9 @@ package handler
 import (
 	"context"
 
-	pd "github.com/HunterGooD/voice_friend/contracts/gen/go/user_service"
 	"github.com/HunterGooD/voice_friend/user_service/pkg/logger"
 	"github.com/HunterGooD/voice_friend/user_service/pkg/server"
+	pd "github.com/HunterGooD/voice_friend_contracts/gen/go/user_service"
 )
 
 type AuthUsecase interface {
