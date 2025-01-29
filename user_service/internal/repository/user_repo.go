@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 
+	"github.com/HunterGooD/voice_friend/user_service/internal/domain/entity"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -21,6 +22,7 @@ func (ur *UserRepository) WithTransaction(tx *sqlx.Tx) *UserRepository {
 	return &UserRepository{ur.db, tx}
 }
 
-func (ur *UserRepository) AddUser(ctx context.Context) {
+func (ur *UserRepository) AddUser(ctx context.Context, user *entity.User) error {
 
+	return nil
 }

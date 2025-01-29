@@ -24,9 +24,9 @@ type AuthHandler struct {
 	log logger.Logger
 }
 
-func NewAuthHandler(server *server.GRPCServer, uu AuthUsecase, log logger.Logger) {
+func NewAuthHandler(gRPCServer *server.GRPCServer, uu AuthUsecase, log logger.Logger) {
 	authHandler := &AuthHandler{uu: uu, log: log}
-	pd.RegisterAuthServer(server.GetServer(), authHandler)
+	pd.RegisterAuthServer(gRPCServer.GetServer(), authHandler)
 }
 
 func (ah *AuthHandler) Register(ctx context.Context, req *pd.RegisterRequest) (*pd.AuthResponse, error) {
@@ -58,6 +58,7 @@ func (ah *AuthHandler) Register(ctx context.Context, req *pd.RegisterRequest) (*
 		if errors.Is(err, entity.ErrInternal) {
 			return nil, status.Errorf(codes.Internal, "request internal error")
 		}
+		return nil, status.Errorf(codes.Internal, "unknown error %+v", err)
 	}
 
 	return &pd.AuthResponse{

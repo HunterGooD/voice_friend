@@ -8,6 +8,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/pkg/errors"
 )
 
 type JWT struct {
@@ -20,7 +21,7 @@ type JWT struct {
 }
 
 type AuthClaims struct {
-	Role []string `json:"role"`
+	Role string `json:"role"`
 	jwt.RegisteredClaims
 }
 
@@ -29,6 +30,7 @@ func NewJWTGenerator(certPath, issuer string, accessToken, refreshToken time.Dur
 	if err != nil {
 		return nil, err
 	}
+
 	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM(keyData)
 	if err != nil {
 		return nil, err
@@ -36,15 +38,33 @@ func NewJWTGenerator(certPath, issuer string, accessToken, refreshToken time.Dur
 	return &JWT{privateKey, accessToken, refreshToken, issuer, audience}, nil
 }
 
-// TODO: а надо ли ? может возвращать структуру с access и refresh токеном
-func (j *JWT) GenerateAllTokens(ctx context.Context, uid string, roles []string) ([]string, error) {
+// TODO: а надо ли ? может возвращать структуру с access и refresh токеном|
+// GenerateAllTokens return array tokens first elem is access token and second if refresh token
+func (j *JWT) GenerateAllTokens(ctx context.Context, uid, role string) ([]string, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 
-	return []string{}, nil
+	access, err := j.GenerateAccessToken(ctx, uid, role)
+	if err != nil {
+		return nil, errors.Wrap(err, "Error create access token")
+	}
+
+	refresh, err := j.GenerateRefreshToken(ctx, uid, role)
+	if err != nil {
+		return nil, errors.Wrap(err, "Error create refresh token")
+	}
+
+	return []string{access, refresh}, nil
 }
 
-func (j *JWT) GenerateAccessToken(ctx context.Context, uid string, roles []string) (string, error) {
+func (j *JWT) GenerateAccessToken(ctx context.Context, uid, role string) (string, error) {
+	if ctx.Err() != nil {
+		return "", ctx.Err()
+	}
+
 	claims := AuthClaims{
-		Role: roles,
+		Role: role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    j.issuer,
 			Subject:   uid,
@@ -55,14 +75,18 @@ func (j *JWT) GenerateAccessToken(ctx context.Context, uid string, roles []strin
 		},
 	}
 
-	signedToken, err := j.generateJWT(ctx, &claims)
+	signedToken, err := j.generateJWT(&claims)
 
 	return signedToken, err
 }
 
-func (j *JWT) GenerateRefreshToken(ctx context.Context, uid string, roles []string) (string, error) {
+func (j *JWT) GenerateRefreshToken(ctx context.Context, uid, role string) (string, error) {
+	if ctx.Err() != nil {
+		return "", ctx.Err()
+	}
+
 	claims := AuthClaims{
-		Role: roles,
+		Role: role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    j.issuer,
 			Subject:   uid,
@@ -73,16 +97,12 @@ func (j *JWT) GenerateRefreshToken(ctx context.Context, uid string, roles []stri
 		},
 	}
 
-	signedToken, err := j.generateJWT(ctx, &claims)
+	signedToken, err := j.generateJWT(&claims)
 
 	return signedToken, err
 }
 
-func (j *JWT) generateJWT(ctx context.Context, claims *AuthClaims) (string, error) {
-	if ctx.Err() != nil {
-		return "", ctx.Err()
-	}
-
+func (j *JWT) generateJWT(claims *AuthClaims) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 	signedToken, err := token.SignedString(j.privateKey)
 	if err != nil {

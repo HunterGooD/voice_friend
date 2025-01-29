@@ -19,9 +19,9 @@ type UserProfileHandler struct {
 	log logger.Logger
 }
 
-func NewUserProfileHandler(server *server.GRPCServer, uu UserProfileUsecase, log logger.Logger) {
+func NewUserProfileHandler(gRPCServer *server.GRPCServer, uu UserProfileUsecase, log logger.Logger) {
 	userProfileHandler := &UserProfileHandler{uu: uu, log: log}
-	pd.RegisterUserProfileServer(server.GetServer(), userProfileHandler)
+	pd.RegisterUserProfileServer(gRPCServer.GetServer(), userProfileHandler)
 }
 
 func (up *UserProfileHandler) ChangeAvatar(ctx context.Context, req *pd.AvatarChangeRequest) (*pd.AvatarChangeResponse, error) {
