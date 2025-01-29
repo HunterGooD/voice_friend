@@ -38,7 +38,7 @@ type Config struct {
 	} `yaml:"database"`
 	JWT struct {
 		AccessTokenDuration  time.Duration `yaml:"accessTokenDuration"`
-		RefreshTokenDuration time.Duration `yaml:"refreshTokenDuration"`
+		RefreshTokenDuration int           `yaml:"refreshTokenDuration"`
 		Issuer               string        `yaml:"issuer"`
 	} `yaml:"jwt"`
 }
@@ -75,4 +75,9 @@ func (c *Config) BuildDSN() string {
 
 func (c *Config) GetAddress() string {
 	return fmt.Sprintf("%s:%s", c.Server.Host, c.Server.Port)
+}
+
+func (c *Config) GetRefreshTokenTime() time.Duration {
+	// day * days in config
+	return time.Duration(c.JWT.RefreshTokenDuration) * (time.Hour * 24)
 }

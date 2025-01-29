@@ -2,12 +2,12 @@ app:
   cert_file_path: "../certs/private_key.pem"
 server:
   host: 127.0.0.1
-  port: 8080
+  port: 8081 # grpc port
   timeout:
-    server: 30
-    read: 15
-    write: 10
-    idle: 5
+    server: "30s"
+    read: "15s"
+    write: "10s"
+    idle: "5s"
 database:
   host: 127.0.0.1
   port: 5432
@@ -18,8 +18,8 @@ database:
   pool_connection:
     max_open_conns: 25
     max_idle_conns: 25
-    max_life_time: 5 # minutes
+    max_life_time: "5m" # minutes
 jwt:
-  accessTokenDuration:  5  # minutes
+  accessTokenDuration:  "5m"  # minutes
   refreshTokenDuration: 30 # days
   issuer: "user_service"

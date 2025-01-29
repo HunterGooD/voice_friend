@@ -40,7 +40,7 @@ func main() {
 		cfg.App.CertFilePath,
 		cfg.JWT.Issuer,
 		cfg.JWT.AccessTokenDuration,
-		cfg.JWT.RefreshTokenDuration,
+		cfg.GetRefreshTokenTime(),
 		[]string{""},
 	)
 	if err != nil {

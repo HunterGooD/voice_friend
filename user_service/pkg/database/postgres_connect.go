@@ -16,7 +16,7 @@ func NewPostgresConnection(dsn string, maxOpenConns, maxIdleConns int, maxLifeTi
 	// settings pool connections
 	db.SetMaxOpenConns(maxOpenConns)
 	db.SetMaxIdleConns(maxIdleConns)
-	db.SetConnMaxLifetime(maxLifeTime * time.Minute)
+	db.SetConnMaxLifetime(maxLifeTime)
 
 	return db, nil
 }

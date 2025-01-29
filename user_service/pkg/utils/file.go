@@ -1,9 +1,10 @@
 package utils
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/pkg/errors"
 )
 
 func FileExist(basePath, filePath string) (bool, error) {
@@ -16,17 +17,16 @@ func FileExist(basePath, filePath string) (bool, error) {
 }
 
 func GetFullPath(basePath, filePath string) (string, error) {
-	const NameFunc = "utils.GetFullPath"
 	var err error
 	if basePath == "" {
 		basePath, err = os.Getwd()
 		if err != nil {
-			return "", fmt.Errorf("%s: failed to get current dir: %w", NameFunc, err)
+			return "", errors.Wrap(err, "Error gett pwd path")
 		}
 	}
 	fullPath, err := filepath.Abs(filepath.Join(basePath, filePath))
 	if err != nil {
-		return "", fmt.Errorf("%s: failed to create absolute path: %w", NameFunc, err)
+		return "", errors.Wrap(err, "Error abs path getting")
 	}
 	return fullPath, err
 }
