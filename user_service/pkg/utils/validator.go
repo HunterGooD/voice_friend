@@ -7,10 +7,12 @@ var (
 	rePhone = regexp.MustCompile(`^\+?[1-9]\d{1,14}$`)
 )
 
+// ValidateEmail regexp validation
+// if match eq false it's not correct
 func ValidateEmail(email string) bool {
-	return reEmail.MatchString(email)
+	return reEmail.MatchString(email) == false
 }
 
 func ValidatePhone(phone string) bool {
-	return rePhone.MatchString(phone)
+	return rePhone.MatchString(phone) == false
 }

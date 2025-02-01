@@ -31,7 +31,7 @@ func (ur *UserRepository) AddUser(ctx context.Context, user *entity.User) error 
 		RETURNING id, uid, created_at, updated_at;`
 	rows, err := ur.db.NamedQueryContext(ctx, query, user)
 	if err != nil {
-		return errors.Wrap(err, "Error adding user")
+		return errors.Wrap(err, "Error execute insert query for new user")
 	}
 	defer rows.Close()
 
@@ -49,7 +49,7 @@ func (ur *UserRepository) ExistUser(ctx context.Context, login string) (bool, er
 	query := `SELECT EXISTS(SELECT 1 FROM users WHERE login = $1)`
 	err := ur.db.GetContext(ctx, &exists, query, login)
 	if err != nil {
-		return false, errors.Wrap(err, "check exists user error")
+		return false, errors.Wrap(err, "Error check exists user")
 	}
 	return exists, nil
 }

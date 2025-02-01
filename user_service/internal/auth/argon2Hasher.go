@@ -5,12 +5,17 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"fmt"
+	"github.com/HunterGooD/voice_friend/user_service/internal/domain/entity"
+	"regexp"
+	"strconv"
 
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/argon2"
 )
 
 const templateArgonString = "$argon2id$v=%d$m=%d,t=%d,p=%d$%s$%s"
+
+var parseRegExp = regexp.MustCompile(`\$argon2id\$v=(\d+)\$m=(\d+),t=(\d+),p=(\d+)\$([^$]+)\$([^$]+)`)
 
 type Argon2Hasher struct {
 	time    uint32
@@ -39,15 +44,37 @@ func (ah *Argon2Hasher) HashPassword(password string) (string, error) {
 }
 
 func (ah *Argon2Hasher) CheckPassword(password, hashedPassword string) (bool, error) {
-	var version int
 	var parallelism uint8
 	var memory, iterations uint32
 	var salt, hash string
 
-	_, err := fmt.Sscanf(hashedPassword, templateArgonString, &version, &memory, &iterations, &parallelism, &salt, &hash)
-	if err != nil {
-		return false, errors.Wrap(err, "sscanf read to vars error")
+	matches := parseRegExp.FindStringSubmatch(hashedPassword)
+	if matches == nil || len(matches) != 7 {
+		return false, errors.Wrap(entity.ErrDataNotValid, "Error parsing password params")
 	}
+
+	// skip 0 index because its source string
+	var err error
+	memory64, err := strconv.ParseUint(matches[2], 10, 32)
+	if err != nil {
+		return false, errors.Wrap(err, "Error parsing memory params")
+	}
+	memory = uint32(memory64)
+
+	iterations64, err := strconv.ParseUint(matches[3], 10, 32)
+	if err != nil {
+		return false, errors.Wrap(err, "Error parsing iterations params")
+	}
+	iterations = uint32(iterations64)
+
+	parallelism64, err := strconv.ParseUint(matches[4], 10, 8)
+	if err != nil {
+		return false, errors.Wrap(err, "Error parsing parallelism params")
+	}
+	parallelism = uint8(parallelism64)
+
+	salt = matches[5]
+	hash = matches[6]
 
 	saltBytes, err := base64.RawStdEncoding.DecodeString(salt)
 	if err != nil {

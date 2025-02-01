@@ -99,7 +99,7 @@ func (log *logrusLogger) parseLogrusOpt(opt ...any) logrus.Fields {
 				params[key] = value
 			}
 		case error:
-			params["error"] = val.Error()
+			params["error"] = val
 		default:
 			params["param_"+strconv.Itoa(k)] = val
 		}
