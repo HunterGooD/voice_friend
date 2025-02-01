@@ -17,8 +17,9 @@ import (
 func main() {
 	// load config
 	log := logger.NewJsonLogrusLogger(os.Stdout, os.Getenv("LOG_LEVEL"))
-	config_path := os.Getenv("CONFIG_PATH")
-	cfg, err := config.NewConfig(config_path)
+	//log := logger.NewJsonSlogLogger(os.Stdout, os.Getenv("LOG_LEVEL"))
+	configPath := os.Getenv("CONFIG_PATH")
+	cfg, err := config.NewConfig(configPath)
 	if err != nil {
 		log.Error("Error init config", err)
 		panic(err)
@@ -49,7 +50,10 @@ func main() {
 		panic(err)
 	}
 
-	authUsecase := usecase.NewAuthUsecase(userRepository, tokenManager, log)
+	// TODO: to config params
+	hasher := auth.NewArgon2Hasher(3, 64*1024, 32, 16, 2)
+
+	authUsecase := usecase.NewAuthUsecase(userRepository, tokenManager, hasher, log)
 	userProfileUsecase := usecase.NewUserProfileUsecase(userRepository, tokenManager, log)
 
 	// init gRPC server

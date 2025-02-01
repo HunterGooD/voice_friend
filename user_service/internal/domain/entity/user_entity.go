@@ -28,7 +28,7 @@ type User struct {
 	Login          string          `db:"login"`
 	Name           string          `db:"name"`
 	UID            uuid.UUID       `db:"uid"`
-	Email          string          `db:"email"`
+	Email          *string         `db:"email"`
 	Password       string          `db:"password"`
 	IsActive       bool            `db:"is_active"`
 	LastLogin      *time.Time      `db:"last_login"`

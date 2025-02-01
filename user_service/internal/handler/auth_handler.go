@@ -34,18 +34,21 @@ func (ah *AuthHandler) Register(ctx context.Context, req *pd.RegisterRequest) (*
 		return nil, status.Errorf(codes.InvalidArgument, "request missing required field: Name or Login or Password")
 	}
 
-	if utils.ValidateEmail(*req.Email) {
-		return nil, status.Errorf(codes.InvalidArgument, "request email invalid validation")
+	if req.Email != nil {
+		if utils.ValidateEmail(*req.Email) {
+			return nil, status.Errorf(codes.InvalidArgument, "request email invalid validation")
+		}
 	}
-
-	if utils.ValidatePhone(*req.Phone) {
-		return nil, status.Errorf(codes.InvalidArgument, "request phone invalid validation")
+	if req.Phone != nil {
+		if utils.ValidatePhone(*req.Phone) {
+			return nil, status.Errorf(codes.InvalidArgument, "request phone invalid validation")
+		}
 	}
 
 	user := entity.User{
 		Login:          req.Login,
 		Name:           req.Name,
-		Email:          *req.Email,
+		Email:          req.Email,
 		Password:       req.Password,
 		ProfilePicture: req.ProfilePicture,
 		Phone:          req.Phone,

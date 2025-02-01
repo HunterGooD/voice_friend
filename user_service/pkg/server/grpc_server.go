@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"os"
 	"os/signal"
@@ -24,13 +25,14 @@ type GRPCServer struct {
 
 func NewGRPCServer(log logger.Logger, retriesCount int, timeout time.Duration) *GRPCServer {
 	recoveryOpts := []recovery.Option{
-		recovery.WithRecoveryHandler(func(p interface{}) (err error) {
-			log.Error("Recovered from panic", map[string]any{"panic": p})
-			return status.Errorf(codes.Internal, "internal error")
+		recovery.WithRecoveryHandler(func(p any) (err error) {
+			log.Error("Recovered from panic", map[string]any{"panic": fmt.Sprintf("panic %+v", p)})
+			return status.Errorf(codes.Internal, "%s", p)
 		}),
 	}
 	loggingOpts := []grpclog.Option{
 		grpclog.WithLogOnEvents(
+			//grpclog.StartCall, grpclog.FinishCall,
 			grpclog.PayloadReceived, grpclog.PayloadSent,
 		),
 	}
@@ -86,15 +88,6 @@ func (s *GRPCServer) GetServer() *grpc.Server {
 
 func interceptorLogger(l logger.Logger) grpclog.Logger {
 	return grpclog.LoggerFunc(func(ctx context.Context, lvl grpclog.Level, msg string, fields ...any) {
-		switch lvl {
-		case grpclog.LevelDebug:
-			l.Debug(msg, fields...)
-		case grpclog.LevelInfo:
-			l.Info(msg, fields...)
-		case grpclog.LevelWarn:
-			l.Warn(msg, fields...)
-		case grpclog.LevelError:
-			l.Error(msg, fields...)
-		}
+		l.Log(ctx, int(lvl), msg, fields...)
 	})
 }
