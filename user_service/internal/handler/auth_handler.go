@@ -35,12 +35,12 @@ func (ah *AuthHandler) Register(ctx context.Context, req *pd.RegisterRequest) (*
 	}
 
 	if req.Email != nil {
-		if utils.ValidateEmail(*req.Email) {
+		if utils.ValidateEmail(*req.Email) != true {
 			return nil, status.Errorf(codes.InvalidArgument, "request email invalid validation")
 		}
 	}
 	if req.Phone != nil {
-		if utils.ValidatePhone(*req.Phone) {
+		if utils.ValidatePhone(*req.Phone) != true {
 			return nil, status.Errorf(codes.InvalidArgument, "request phone invalid validation")
 		}
 	}
