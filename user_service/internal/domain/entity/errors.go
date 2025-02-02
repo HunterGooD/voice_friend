@@ -5,10 +5,10 @@ import (
 )
 
 var (
-	ErrUserAlreadyExists = errors.New("User already exists")
-	ErrNotFound          = errors.New("Not found")
-	ErrUnauthorized      = errors.New("Unauthorization user")
-	ErrDataNotValid      = errors.New("Not valid user data")
-	ErrInvalidPassword   = errors.New("Invalid password")
-	ErrInternal          = errors.New("Unexpected error")
+	ErrUserAlreadyExists = errors.New("user already exists")
+	ErrNotFound          = errors.New("not found")
+	ErrUnauthorized      = errors.New("unauthorization user")
+	ErrDataNotValid      = errors.New("not valid user data")
+	ErrInvalidPassword   = errors.New("invalid password")
+	ErrInternal          = errors.New("unexpected error")
 )

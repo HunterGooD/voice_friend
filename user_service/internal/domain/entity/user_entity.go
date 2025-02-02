@@ -1,7 +1,6 @@
 package entity
 
 import (
-	"database/sql"
 	"encoding/json"
 	"time"
 
@@ -29,15 +28,20 @@ type User struct {
 	Login          string          `db:"login"`
 	Name           string          `db:"name"`
 	UID            uuid.UUID       `db:"uid"`
-	Email          string          `db:"email"`
+	Email          *string         `db:"email"`
 	Password       string          `db:"password"`
 	IsActive       bool            `db:"is_active"`
-	LastLogin      sql.NullTime    `db:"last_login"`
+	LastLogin      *time.Time      `db:"last_login"`
 	Role           Role            `db:"role"`
-	ProfilePicture sql.NullString  `db:"profile_picture"`
-	Phone          sql.NullString  `db:"phone"`
+	ProfilePicture *string         `db:"profile_picture"`
+	Phone          *string         `db:"phone"`
 	Metadata       json.RawMessage `db:"metadata"`
 	CreatedAt      time.Time       `db:"created_at"`
 	UpdatedAt      time.Time       `db:"updated_at"`
-	DeletedAt      sql.NullTime    `db:"deleted_at"`
+	DeletedAt      *time.Time      `db:"deleted_at"`
+}
+
+type AuthUserResponse struct {
+	AccessToken  string
+	RefreshToken string
 }
