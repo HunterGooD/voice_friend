@@ -36,21 +36,9 @@ func (h *AuthHandler) Register(ctx context.Context, req *pd.RegisterRequest) (*p
 		return nil, status.Errorf(codes.InvalidArgument, "Request missing required field: Name or Login or Password")
 	}
 
-	if req.Email != nil {
-		if utils.ValidateEmail(*req.Email) != true {
-			h.log.Warn("Email dont valid", map[string]interface{}{
-				"email": *req.Email,
-			})
-			return nil, status.Errorf(codes.InvalidArgument, "Request email invalid validation")
-		}
-	}
-	if req.Phone != nil {
-		if utils.ValidatePhone(*req.Phone) != true {
-			h.log.Warn("Phone number dont valid", map[string]interface{}{
-				"phone": *req.Phone,
-			})
-			return nil, status.Errorf(codes.InvalidArgument, "Request phone invalid validation")
-		}
+	err := h.validator(req.Email, req.Phone)
+	if err != nil {
+		return nil, err
 	}
 
 	user := entity.User{
@@ -95,21 +83,9 @@ func (h *AuthHandler) Login(ctx context.Context, req *pd.LoginRequest) (*pd.Auth
 		return nil, status.Errorf(codes.InvalidArgument, "Request missing required field: Name or Login or Password")
 	}
 
-	if req.Email != nil {
-		if utils.ValidateEmail(*req.Email) != true {
-			h.log.Warn("Email dont valid", map[string]interface{}{
-				"email": *req.Email,
-			})
-			return nil, status.Errorf(codes.InvalidArgument, "Request email invalid validation")
-		}
-	}
-	if req.Phone != nil {
-		if utils.ValidatePhone(*req.Phone) != true {
-			h.log.Warn("Phone number dont valid", map[string]interface{}{
-				"phone": *req.Phone,
-			})
-			return nil, status.Errorf(codes.InvalidArgument, "Request phone invalid validation")
-		}
+	err := h.validator(req.Email, req.Phone)
+	if err != nil {
+		return nil, err
 	}
 
 	user := entity.User{
@@ -119,9 +95,30 @@ func (h *AuthHandler) Login(ctx context.Context, req *pd.LoginRequest) (*pd.Auth
 		Phone:    req.Phone,
 	}
 
+	// TODO: errors handler to func and return response
 	h.authUsecase.LoginUserUsecase(ctx, &user)
 
 	return nil, nil
+}
+
+func (h *AuthHandler) validator(email, phone *string) error {
+	if email != nil {
+		if utils.ValidateEmail(*email) != true {
+			h.log.Warn("Email dont valid", map[string]interface{}{
+				"email": *email,
+			})
+			return status.Errorf(codes.InvalidArgument, "Request email invalid validation")
+		}
+	}
+	if phone != nil {
+		if utils.ValidatePhone(*phone) != true {
+			h.log.Warn("Phone number dont valid", map[string]interface{}{
+				"phone": *phone,
+			})
+			return status.Errorf(codes.InvalidArgument, "Request phone invalid validation")
+		}
+	}
+	return nil
 }
 
 func (h *AuthHandler) LogOut(ctx context.Context, req *pd.LogoutRequest) (*pd.LogoutResponse, error) {

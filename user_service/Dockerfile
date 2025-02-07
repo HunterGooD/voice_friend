@@ -1,7 +1,7 @@
 FROM golang:1.22-alpine as builder
 WORKDIR /build
 COPY go.mod . 
-RUN go mod download && \ 
+RUN go mod download && \
     go mod tidy
 COPY . .
 RUN go build -o /main cmd/grpc_server/main.go
