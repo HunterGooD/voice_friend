@@ -18,18 +18,18 @@ func NewUserRepository(conn *sqlx.DB) *UserRepository {
 	}
 }
 
-func (ur *UserRepository) WithTransaction(tx *sqlx.Tx) *UserRepository {
-	return &UserRepository{ur.db, tx}
+func (r *UserRepository) WithTransaction(tx *sqlx.Tx) *UserRepository {
+	return &UserRepository{r.db, tx}
 }
 
-func (ur *UserRepository) AddUser(ctx context.Context, user *entity.User) error {
+func (r *UserRepository) AddUser(ctx context.Context, user *entity.User) error {
 	query := `INSERT INTO users (
 			login, name, email, password, profile_picture, phone
 		) VALUES (
 			:login, :name, :email, :password, :profile_picture, :phone
 		)
 		RETURNING id, uid, created_at, updated_at;`
-	rows, err := ur.db.NamedQueryContext(ctx, query, user)
+	rows, err := r.db.NamedQueryContext(ctx, query, user)
 	if err != nil {
 		return errors.Wrap(err, "Error execute insert query for new user")
 	}
@@ -44,12 +44,22 @@ func (ur *UserRepository) AddUser(ctx context.Context, user *entity.User) error 
 	return nil
 }
 
-func (ur *UserRepository) ExistUser(ctx context.Context, login string) (bool, error) {
+func (r *UserRepository) ExistUser(ctx context.Context, login string) (bool, error) {
 	var exists bool
 	query := `SELECT EXISTS(SELECT 1 FROM users WHERE login = $1)`
-	err := ur.db.GetContext(ctx, &exists, query, login)
+	err := r.db.GetContext(ctx, &exists, query, login)
 	if err != nil {
 		return false, errors.Wrap(err, "Error check exists user")
 	}
 	return exists, nil
+}
+
+func (r *UserRepository) GetUserPasswordByLogin(ctx context.Context, login string) (string, error) {
+	var password string
+	query := `SELECT password FROM users WHERE login = $1`
+	err := r.db.GetContext(ctx, &password, query, login)
+	if err != nil {
+		return "", errors.Wrap(err, "Error check exists user")
+	}
+	return password, nil
 }

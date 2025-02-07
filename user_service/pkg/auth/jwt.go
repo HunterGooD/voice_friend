@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"crypto/rsa"
+	"fmt"
 	"os"
 	"sync"
 	"time"
@@ -41,6 +42,32 @@ func NewJWTGenerator(certPath, issuer string, accessToken, refreshToken time.Dur
 
 func NewJWTGeneratorWithPrivateKey(privateKey *rsa.PrivateKey, issuer string, accessToken, refreshToken time.Duration, audience []string) (*JWT, error) {
 	return &JWT{privateKey, accessToken, refreshToken, issuer, audience}, nil
+}
+
+func loadPublicKey(filePath string) (*rsa.PublicKey, error) {
+	keyData, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+	publicKey, err := jwt.ParseRSAPublicKeyFromPEM(keyData)
+	if err != nil {
+		return nil, err
+	}
+	return publicKey, nil
+}
+
+func ValidateJWT(tokenString string, publicKey *rsa.PublicKey) (*jwt.Token, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return publicKey, nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	return token, nil
 }
 
 // GenerateAllTokensAsync TODO: а надо ли ? может возвращать структуру с access и refresh токеном|

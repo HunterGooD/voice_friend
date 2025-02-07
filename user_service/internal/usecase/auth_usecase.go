@@ -4,16 +4,17 @@ import (
 	"context"
 
 	"github.com/HunterGooD/voice_friend/user_service/internal/domain/entity"
-	"github.com/HunterGooD/voice_friend/user_service/pkg/logger"
 	"github.com/pkg/errors"
 )
 
 type UserRepository interface {
 	AddUser(ctx context.Context, user *entity.User) error
 	ExistUser(ctx context.Context, login string) (bool, error)
+	GetUserPasswordByLogin(ctx context.Context, login string) (string, error)
 }
 
 type TokenManager interface {
+	GenerateAllTokensAsync(ctx context.Context, uid, role string) ([]string, error)
 	GenerateAllTokens(ctx context.Context, uid string, role string) ([]string, error)
 	GenerateAccessToken(ctx context.Context, uid string, role string) (string, error)
 	GenerateRefreshToken(ctx context.Context, uid string, role string) (string, error)
@@ -28,20 +29,17 @@ type AuthUsecase struct {
 	userRepo UserRepository
 	tokenMng TokenManager
 	hashMng  HashManager
-
-	log logger.Logger
 }
 
-func NewAuthUsecase(ur UserRepository, tm TokenManager, hs HashManager, log logger.Logger) *AuthUsecase {
-	return &AuthUsecase{ur, tm, hs, log}
+func NewAuthUsecase(ur UserRepository, tm TokenManager, hs HashManager) *AuthUsecase {
+	return &AuthUsecase{ur, tm, hs}
 }
 
 func (u *AuthUsecase) RegisterUserUsecase(ctx context.Context, user *entity.User) (*entity.AuthUserResponse, error) {
 
 	ok, err := u.userRepo.ExistUser(ctx, user.Login)
 	if err != nil {
-		u.log.Error("Error checking if user exists", err)
-		return nil, errors.Wrap(err, "failed to check user existence")
+		return nil, errors.Wrap(err, "Error check user existence")
 	}
 	if ok {
 		return nil, entity.ErrUserAlreadyExists
@@ -50,29 +48,44 @@ func (u *AuthUsecase) RegisterUserUsecase(ctx context.Context, user *entity.User
 	// TODO: maybe refactor
 	hashPassword, err := u.hashMng.HashPassword(user.Password)
 	if err != nil {
-		u.log.Error("Error create hash", err)
-		return nil, errors.Wrap(entity.ErrInternal, "Error create hash")
+		return nil, errors.Wrap(err, "Error create hash")
 	}
 	user.Password = hashPassword
 
 	if err := u.userRepo.AddUser(ctx, user); err != nil {
-		u.log.Error("Add user in db error", map[string]error{
-			"error": err,
-		})
-		return nil, err
+		return nil, errors.Wrap(err, "Error create user")
 	}
 
-	u.log.Info("Added user in db", map[string]any{
-		"login": user.Login,
-		"uid":   user.UID.String(),
-	})
+	return u.generateAuthResponse(ctx, user.UID.String(), string(user.Role))
+}
 
-	tokens, err := u.tokenMng.GenerateAllTokens(ctx, user.UID.String(), string(user.Role))
+func (u *AuthUsecase) LoginUserUsecase(ctx context.Context, user *entity.User) (*entity.AuthUserResponse, error) {
+	password, err := u.userRepo.GetUserPasswordByLogin(ctx, user.Login)
 	if err != nil {
-		u.log.Error("Error on create jwt tokens", map[string]any{
-			"error": err,
-		})
-		return nil, errors.Wrap(entity.ErrInternal, "error create jwt")
+		return nil, errors.Wrap(err, "Error get user password")
+	}
+
+	isCorrect, err := u.hashMng.CheckPassword(user.Password, password)
+	if err != nil {
+		return nil, errors.Wrap(err, "Error check password")
+	}
+
+	if !isCorrect {
+		return nil, errors.Wrap(entity.ErrInvalidPassword, "Error password not correct")
+	}
+
+	return u.generateAuthResponse(ctx, user.UID.String(), string(user.Role))
+}
+
+func (u *AuthUsecase) LogoutUserUsecase(ctx context.Context, user *entity.User) error {
+	// Deactivate access token and refresh token
+	return nil
+}
+
+func (u *AuthUsecase) generateAuthResponse(ctx context.Context, uid, role string) (*entity.AuthUserResponse, error) {
+	tokens, err := u.tokenMng.GenerateAllTokensAsync(ctx, uid, role)
+	if err != nil {
+		return nil, errors.Wrap(err, "Error create jwt")
 	}
 
 	return &entity.AuthUserResponse{

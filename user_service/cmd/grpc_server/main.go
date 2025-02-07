@@ -1,11 +1,11 @@
 package main
 
 import (
+	auth2 "github.com/HunterGooD/voice_friend/user_service/pkg/auth"
 	"os"
 	"time"
 
 	"github.com/HunterGooD/voice_friend/user_service/config"
-	"github.com/HunterGooD/voice_friend/user_service/internal/auth"
 	"github.com/HunterGooD/voice_friend/user_service/internal/handler"
 	"github.com/HunterGooD/voice_friend/user_service/internal/repository"
 	"github.com/HunterGooD/voice_friend/user_service/internal/usecase"
@@ -17,7 +17,7 @@ import (
 func main() {
 	// load config
 	log := logger.NewJsonLogrusLogger(os.Stdout, os.Getenv("LOG_LEVEL"))
-	//log := logger.NewJsonSlogLogger(os.Stdout, os.Getenv("LOG_LEVEL"))
+
 	configPath := os.Getenv("CONFIG_PATH")
 	cfg, err := config.NewConfig(configPath)
 	if err != nil {
@@ -38,7 +38,7 @@ func main() {
 
 	userRepository := repository.NewUserRepository(db)
 
-	tokenManager, err := auth.NewJWTGenerator(
+	tokenManager, err := auth2.NewJWTGenerator(
 		cfg.App.CertFilePath,
 		cfg.JWT.Issuer,
 		cfg.JWT.AccessTokenDuration,
@@ -51,9 +51,9 @@ func main() {
 	}
 
 	// TODO: to config params
-	hasher := auth.NewArgon2Hasher(3, 64*1024, 32, 16, 2)
+	hasher := auth2.NewArgon2Hasher(3, 64*1024, 32, 16, 2)
 
-	authUsecase := usecase.NewAuthUsecase(userRepository, tokenManager, hasher, log)
+	authUsecase := usecase.NewAuthUsecase(userRepository, tokenManager, hasher)
 	userProfileUsecase := usecase.NewUserProfileUsecase(userRepository, tokenManager, log)
 
 	// init gRPC server
