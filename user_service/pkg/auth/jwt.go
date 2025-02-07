@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rsa"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -14,10 +15,10 @@ import (
 type JWT struct {
 	privateKey *rsa.PrivateKey
 
-	accessToken  time.Duration
-	refreshToken time.Duration
-	issuer       string
-	audience     []string
+	accessTokenDuration  time.Duration
+	refreshTokenDuration time.Duration
+	issuer               string
+	audience             []string
 }
 
 type AuthClaims struct {
@@ -38,8 +39,61 @@ func NewJWTGenerator(certPath, issuer string, accessToken, refreshToken time.Dur
 	return &JWT{privateKey, accessToken, refreshToken, issuer, audience}, nil
 }
 
-// TODO: а надо ли ? может возвращать структуру с access и refresh токеном|
-// GenerateAllTokens return array tokens first elem is access token and second if refresh token
+func NewJWTGeneratorWithPrivateKey(privateKey *rsa.PrivateKey, issuer string, accessToken, refreshToken time.Duration, audience []string) (*JWT, error) {
+	return &JWT{privateKey, accessToken, refreshToken, issuer, audience}, nil
+}
+
+// GenerateAllTokensAsync TODO: а надо ли ? может возвращать структуру с access и refresh токеном|
+//
+//	return array tokens first elem is access token and second if refresh token
+func (j *JWT) GenerateAllTokensAsync(ctx context.Context, uid, role string) ([]string, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+
+	refreshCh, accessCh := make(chan string, 1), make(chan string, 1)
+	errCh := make(chan error, 1)
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		access, err := j.GenerateAccessToken(ctx, uid, role)
+		if err != nil {
+			errCh <- errors.Wrap(err, "Error create access token")
+			return
+		}
+		accessCh <- access
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		refresh, err := j.GenerateRefreshToken(ctx, uid, role)
+		if err != nil {
+			errCh <- errors.Wrap(err, "Error create refresh token")
+			return
+		}
+		refreshCh <- refresh
+	}()
+
+	go func() {
+		wg.Wait()
+		close(errCh)
+		close(accessCh)
+		close(refreshCh)
+	}()
+
+	for err := range errCh {
+		if err != nil {
+			return nil, err
+		}
+	}
+	return []string{<-accessCh, <-refreshCh}, nil
+}
+
+// GenerateAllTokens TODO: а надо ли ? может возвращать структуру с access и refresh токеном|
+//
+// return array tokens first elem is access token and second if refresh token
 func (j *JWT) GenerateAllTokens(ctx context.Context, uid, role string) ([]string, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
@@ -69,7 +123,7 @@ func (j *JWT) GenerateAccessToken(ctx context.Context, uid, role string) (string
 			Issuer:    j.issuer,
 			Subject:   uid,
 			Audience:  j.audience,
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(j.accessToken)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(j.accessTokenDuration)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			ID:        j.generateJTI(),
 		},
@@ -91,7 +145,7 @@ func (j *JWT) GenerateRefreshToken(ctx context.Context, uid, role string) (strin
 			Issuer:    j.issuer,
 			Subject:   uid,
 			Audience:  j.audience,
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(j.refreshToken)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(j.refreshTokenDuration)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			ID:        j.generateJTI(),
 		},
