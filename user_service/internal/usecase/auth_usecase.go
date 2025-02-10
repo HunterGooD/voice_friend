@@ -13,6 +13,12 @@ type UserRepository interface {
 	GetUserPasswordByLogin(ctx context.Context, login string) (string, error)
 }
 
+type TokenRepository interface {
+	StoreRefreshToken(ctx context.Context, userID, deviceID, refreshToken string) error
+	GetRefreshToken(ctx context.Context, userID, deviceID string) (string, error)
+	DeleteRefreshToken(ctx context.Context, userID, deviceID string) error
+}
+
 type TokenManager interface {
 	GenerateAllTokensAsync(ctx context.Context, uid, role string) ([]string, error)
 	GenerateAllTokens(ctx context.Context, uid string, role string) ([]string, error)
@@ -26,13 +32,14 @@ type HashManager interface {
 }
 
 type AuthUsecase struct {
-	userRepo UserRepository
-	tokenMng TokenManager
-	hashMng  HashManager
+	userRepo  UserRepository
+	tokenRepo TokenRepository
+	tokenMng  TokenManager
+	hashMng   HashManager
 }
 
-func NewAuthUsecase(ur UserRepository, tm TokenManager, hs HashManager) *AuthUsecase {
-	return &AuthUsecase{ur, tm, hs}
+func NewAuthUsecase(ur UserRepository, tr TokenRepository, tm TokenManager, hs HashManager) *AuthUsecase {
+	return &AuthUsecase{ur, tr, tm, hs}
 }
 
 func (u *AuthUsecase) RegisterUserUsecase(ctx context.Context, user *entity.User) (*entity.AuthUserResponse, error) {
@@ -77,15 +84,21 @@ func (u *AuthUsecase) LoginUserUsecase(ctx context.Context, user *entity.User) (
 	return u.generateAuthResponse(ctx, user.UID.String(), string(user.Role))
 }
 
-func (u *AuthUsecase) LogoutUserUsecase(ctx context.Context, user *entity.User) error {
+func (u *AuthUsecase) LogoutUserUsecase(ctx context.Context, user *entity.User, deviceID string) error {
 	// Deactivate access token and refresh token
-	return nil
+	return u.tokenRepo.DeleteRefreshToken(ctx, user.UID.String(), deviceID)
 }
 
 func (u *AuthUsecase) generateAuthResponse(ctx context.Context, uid, role string) (*entity.AuthUserResponse, error) {
 	tokens, err := u.tokenMng.GenerateAllTokensAsync(ctx, uid, role)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error create jwt")
+	}
+
+	// TODO: deviceID 3 param
+	err = u.tokenRepo.StoreRefreshToken(ctx, uid, "", tokens[0])
+	if err != nil {
+		return nil, errors.Wrap(err, "Error store refresh token")
 	}
 
 	return &entity.AuthUserResponse{

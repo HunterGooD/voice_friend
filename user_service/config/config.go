@@ -41,6 +41,20 @@ type Config struct {
 		RefreshTokenDuration int           `yaml:"refreshTokenDuration"`
 		Issuer               string        `yaml:"issuer"`
 	} `yaml:"jwt"`
+	Redis struct {
+		Host     string `yaml:"host"`
+		Port     string `yaml:"port"`
+		User     string `yaml:"user"`
+		Password string `yaml:"password"`
+		DBIdx    int    `yaml:"dbIdx"`
+	} `yaml:"redis"`
+	Argon2 struct {
+		Times   uint32 `yaml:"times"`
+		Memory  uint32 `yaml:"memory"`
+		KeyLen  uint32 `yaml:"keyLen"`
+		SaltLen uint32 `yaml:"saltLen"`
+		Threads uint8  `yaml:"threads"`
+	} `yaml:"argon2"`
 }
 
 func NewConfig(file_name string) (*Config, error) {
@@ -70,6 +84,20 @@ func (c *Config) BuildDSN() string {
 		c.Database.Port,
 		c.Database.DBName,
 		c.Database.SSLMode,
+	)
+}
+
+func (c *Config) GetRedisAddr() string {
+	return fmt.Sprintf("%s:%s", c.Redis.Host, c.Redis.Port)
+}
+
+func (c *Config) BuildRedisConn() string {
+	return fmt.Sprintf("redis://%s:%s@%s:%s/%d",
+		c.Redis.User,
+		c.Redis.Password,
+		c.Redis.Host,
+		c.Redis.Port,
+		c.Redis.DBIdx,
 	)
 }
 

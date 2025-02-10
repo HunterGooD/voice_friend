@@ -32,11 +32,18 @@ func main() {
 		cfg.Database.PoolConnection.MaxLifeTime,
 	)
 	if err != nil {
-		log.Error("Error init database", err)
+		log.Error("Error init postgresql database", err)
+		panic(err)
+	}
+
+	conn, err := database.NewRedisConn(cfg.GetRedisAddr(), cfg.Redis.User, cfg.Redis.Password, cfg.Redis.DBIdx)
+	if err != nil {
+		log.Error("Error init redis", err)
 		panic(err)
 	}
 
 	userRepository := repository.NewUserRepository(db)
+	tokenRepository := repository.NewTokenRepository(conn)
 
 	tokenManager, err := auth2.NewJWTGenerator(
 		cfg.App.CertFilePath,
@@ -50,10 +57,15 @@ func main() {
 		panic(err)
 	}
 
-	// TODO: to config params
-	hasher := auth2.NewArgon2Hasher(3, 64*1024, 32, 16, 2)
+	hasher := auth2.NewArgon2Hasher(
+		cfg.Argon2.Times,
+		cfg.Argon2.Memory*1024,
+		cfg.Argon2.KeyLen,
+		cfg.Argon2.SaltLen,
+		cfg.Argon2.Threads,
+	)
 
-	authUsecase := usecase.NewAuthUsecase(userRepository, tokenManager, hasher)
+	authUsecase := usecase.NewAuthUsecase(userRepository, tokenRepository, tokenManager, hasher)
 	userProfileUsecase := usecase.NewUserProfileUsecase(userRepository, tokenManager, log)
 
 	// init gRPC server

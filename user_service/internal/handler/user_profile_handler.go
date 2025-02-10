@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/HunterGooD/voice_friend/user_service/pkg/logger"
-	"github.com/HunterGooD/voice_friend/user_service/pkg/server"
 	pd "github.com/HunterGooD/voice_friend_contracts/gen/go/user_service"
 )
 
@@ -19,7 +18,7 @@ type UserProfileHandler struct {
 	log logger.Logger
 }
 
-func NewUserProfileHandler(gRPCServer *server.GRPCServer, uu UserProfileUsecase, log logger.Logger) {
+func NewUserProfileHandler(gRPCServer GRPCServer, uu UserProfileUsecase, log logger.Logger) {
 	userProfileHandler := &UserProfileHandler{uu: uu, log: log}
 	pd.RegisterUserProfileServer(gRPCServer.GetServer(), userProfileHandler)
 }

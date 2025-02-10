@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"github.com/HunterGooD/voice_friend/user_service/internal/domain/entity"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
@@ -59,7 +60,10 @@ func (r *UserRepository) GetUserPasswordByLogin(ctx context.Context, login strin
 	query := `SELECT password FROM users WHERE login = $1`
 	err := r.db.GetContext(ctx, &password, query, login)
 	if err != nil {
-		return "", errors.Wrap(err, "Error check exists user")
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", errors.Wrap(entity.ErrNotFound, "Error get user password")
+		}
+		return "", errors.Wrap(err, "Unknown error get user password")
 	}
 	return password, nil
 }

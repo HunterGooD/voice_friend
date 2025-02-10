@@ -2,10 +2,10 @@ package handler
 
 import (
 	"context"
+	"google.golang.org/grpc"
 
 	"github.com/HunterGooD/voice_friend/user_service/internal/domain/entity"
 	"github.com/HunterGooD/voice_friend/user_service/pkg/logger"
-	"github.com/HunterGooD/voice_friend/user_service/pkg/server"
 	"github.com/HunterGooD/voice_friend/user_service/pkg/utils"
 	pd "github.com/HunterGooD/voice_friend_contracts/gen/go/user_service"
 	"github.com/pkg/errors"
@@ -16,6 +16,11 @@ import (
 type AuthUsecase interface {
 	RegisterUserUsecase(ctx context.Context, user *entity.User) (*entity.AuthUserResponse, error)
 	LoginUserUsecase(ctx context.Context, user *entity.User) (*entity.AuthUserResponse, error)
+	LogoutUserUsecase(ctx context.Context, user *entity.User, deviceID string) error
+}
+
+type GRPCServer interface {
+	GetServer() *grpc.Server
 }
 
 type AuthHandler struct {
@@ -25,7 +30,7 @@ type AuthHandler struct {
 	log logger.Logger
 }
 
-func NewAuthHandler(gRPCServer *server.GRPCServer, uu AuthUsecase, log logger.Logger) {
+func NewAuthHandler(gRPCServer GRPCServer, uu AuthUsecase, log logger.Logger) {
 	authHandler := &AuthHandler{authUsecase: uu, log: log}
 	pd.RegisterAuthServer(gRPCServer.GetServer(), authHandler)
 }
@@ -51,15 +56,6 @@ func (h *AuthHandler) Register(ctx context.Context, req *pd.RegisterRequest) (*p
 	}
 	res, err := h.authUsecase.RegisterUserUsecase(ctx, &user)
 	if err != nil {
-		//switch errors.Cause(err) {
-		//case entity.ErrUserAlreadyExists:
-		//	return nil, status.Errorf(codes.AlreadyExists, "user already exists")
-		//case entity.ErrInternal:
-		//	return nil, status.Errorf(codes.Internal, "internal error")
-		//default:
-		//	return nil, status.Errorf(codes.Internal, "unknown error %+v", err)
-		//}
-
 		if errors.Is(err, entity.ErrUserAlreadyExists) {
 			h.log.Warn("User already exists", map[string]interface{}{
 				"user":  user,
@@ -80,7 +76,7 @@ func (h *AuthHandler) Register(ctx context.Context, req *pd.RegisterRequest) (*p
 func (h *AuthHandler) Login(ctx context.Context, req *pd.LoginRequest) (*pd.AuthResponse, error) {
 	if req.Login == "" || req.Password == "" {
 		h.log.Warn("Request without params")
-		return nil, status.Errorf(codes.InvalidArgument, "Request missing required field: Name or Login or Password")
+		return nil, status.Errorf(codes.InvalidArgument, "Request missing required field: Login or Password")
 	}
 
 	err := h.validator(req.Email, req.Phone)
@@ -95,10 +91,23 @@ func (h *AuthHandler) Login(ctx context.Context, req *pd.LoginRequest) (*pd.Auth
 		Phone:    req.Phone,
 	}
 
-	// TODO: errors handler to func and return response
-	h.authUsecase.LoginUserUsecase(ctx, &user)
+	res, err := h.authUsecase.LoginUserUsecase(ctx, &user)
+	if err != nil {
+		if errors.Is(err, entity.ErrNotFound) {
+			h.log.Warn("User not found", map[string]interface{}{
+				"user":  user,
+				"error": err,
+			})
+			return nil, status.Errorf(codes.NotFound, "Request user not found")
+		}
+		h.log.Error("Error unknown ", err)
+		return nil, status.Errorf(codes.Internal, "Unknown error %+v", err)
+	}
 
-	return nil, nil
+	return &pd.AuthResponse{
+		AccessToken:  res.AccessToken,
+		RefreshToken: res.RefreshToken,
+	}, nil
 }
 
 func (h *AuthHandler) validator(email, phone *string) error {
@@ -122,5 +131,7 @@ func (h *AuthHandler) validator(email, phone *string) error {
 }
 
 func (h *AuthHandler) LogOut(ctx context.Context, req *pd.LogoutRequest) (*pd.LogoutResponse, error) {
+	// TODO: user uid, deviceID
+	//h.authUsecase.LogoutUserUsecase(ctx, uid)
 	return nil, nil
 }
