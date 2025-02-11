@@ -14,9 +14,9 @@ import (
 )
 
 type AuthUsecase interface {
-	RegisterUserUsecase(ctx context.Context, user *entity.User) (*entity.AuthUserResponse, error)
-	LoginUserUsecase(ctx context.Context, user *entity.User) (*entity.AuthUserResponse, error)
-	LogoutUserUsecase(ctx context.Context, user *entity.User, deviceID string) error
+	RegisterUserUsecase(ctx context.Context, user *entity.User, deviceID string) (*entity.AuthUserResponse, error)
+	LoginUserUsecase(ctx context.Context, user *entity.User, deviceID string) (*entity.AuthUserResponse, error)
+	LogoutUserUsecase(ctx context.Context, refreshToken string) error
 }
 
 type GRPCServer interface {
@@ -36,9 +36,9 @@ func NewAuthHandler(gRPCServer GRPCServer, uu AuthUsecase, log logger.Logger) {
 }
 
 func (h *AuthHandler) Register(ctx context.Context, req *pd.RegisterRequest) (*pd.AuthResponse, error) {
-	if req.Login == "" || req.Name == "" || req.Password == "" {
+	if req.Login == "" || req.Name == "" || req.Password == "" || req.DeviceID == "" {
 		h.log.Warn("Request without params")
-		return nil, status.Errorf(codes.InvalidArgument, "Request missing required field: Name or Login or Password")
+		return nil, status.Errorf(codes.InvalidArgument, "Request missing required field: Name or Login or Password or DeviceID")
 	}
 
 	err := h.validator(req.Email, req.Phone)
@@ -54,7 +54,7 @@ func (h *AuthHandler) Register(ctx context.Context, req *pd.RegisterRequest) (*p
 		ProfilePicture: req.ProfilePicture,
 		Phone:          req.Phone,
 	}
-	res, err := h.authUsecase.RegisterUserUsecase(ctx, &user)
+	res, err := h.authUsecase.RegisterUserUsecase(ctx, &user, req.DeviceID)
 	if err != nil {
 		if errors.Is(err, entity.ErrUserAlreadyExists) {
 			h.log.Warn("User already exists", map[string]interface{}{
@@ -74,9 +74,9 @@ func (h *AuthHandler) Register(ctx context.Context, req *pd.RegisterRequest) (*p
 }
 
 func (h *AuthHandler) Login(ctx context.Context, req *pd.LoginRequest) (*pd.AuthResponse, error) {
-	if req.Login == "" || req.Password == "" {
+	if req.Login == "" || req.Password == "" || req.DeviceID == "" {
 		h.log.Warn("Request without params")
-		return nil, status.Errorf(codes.InvalidArgument, "Request missing required field: Login or Password")
+		return nil, status.Errorf(codes.InvalidArgument, "Request missing required field: Login or Password or DeviceID")
 	}
 
 	err := h.validator(req.Email, req.Phone)
@@ -91,7 +91,7 @@ func (h *AuthHandler) Login(ctx context.Context, req *pd.LoginRequest) (*pd.Auth
 		Phone:    req.Phone,
 	}
 
-	res, err := h.authUsecase.LoginUserUsecase(ctx, &user)
+	res, err := h.authUsecase.LoginUserUsecase(ctx, &user, req.DeviceID)
 	if err != nil {
 		if errors.Is(err, entity.ErrNotFound) {
 			h.log.Warn("User not found", map[string]interface{}{
@@ -130,8 +130,19 @@ func (h *AuthHandler) validator(email, phone *string) error {
 	return nil
 }
 
+func (h *AuthHandler) UpdateAccessToken(ctx context.Context, req *pd.RefreshToken) (*pd.AuthResponse, error) {
+	return nil, nil
+}
+
+func (h *AuthHandler) UpdateRefreshToken(ctx context.Context, req *pd.RefreshToken) (*pd.AuthResponse, error) {
+	return nil, nil
+}
+
 func (h *AuthHandler) LogOut(ctx context.Context, req *pd.LogoutRequest) (*pd.LogoutResponse, error) {
 	// TODO: user uid, deviceID
-	//h.authUsecase.LogoutUserUsecase(ctx, uid)
-	return nil, nil
+	err := h.authUsecase.LogoutUserUsecase(ctx, req.RefreshToken)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Unknown error %+v", err)
+	}
+	return &pd.LogoutResponse{Success: true}, nil
 }

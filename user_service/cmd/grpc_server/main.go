@@ -45,15 +45,18 @@ func main() {
 	userRepository := repository.NewUserRepository(db)
 	tokenRepository := repository.NewTokenRepository(conn)
 
-	tokenManager, err := auth2.NewJWTGenerator(
-		cfg.App.CertFilePath,
+	tokenManager := auth2.NewJWTGenerator(
+		nil,
+		nil,
 		cfg.JWT.Issuer,
 		cfg.JWT.AccessTokenDuration,
 		cfg.GetRefreshTokenTime(),
 		[]string{""},
 	)
+
+	_, err = tokenManager.LoadPrivateKeyFromFile(cfg.App.CertFilePath)
 	if err != nil {
-		log.Error("Error init token manager", err)
+		log.Error("Error load private key for token manager", err)
 		panic(err)
 	}
 

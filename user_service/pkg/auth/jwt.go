@@ -3,7 +3,6 @@ package auth
 import (
 	"context"
 	"crypto/rsa"
-	"fmt"
 	"os"
 	"sync"
 	"time"
@@ -13,8 +12,11 @@ import (
 	"github.com/pkg/errors"
 )
 
+var ErrKeyMissing = errors.New("key missing")
+
 type JWT struct {
 	privateKey *rsa.PrivateKey
+	publicKey  *rsa.PublicKey
 
 	accessTokenDuration  time.Duration
 	refreshTokenDuration time.Duration
@@ -22,12 +24,39 @@ type JWT struct {
 	audience             []string
 }
 
-type AuthClaims struct {
-	Role string `json:"role"`
-	jwt.RegisteredClaims
+func NewJWTGenerator(privateKey *rsa.PrivateKey, publicKey *rsa.PublicKey, issuer string, accessToken, refreshToken time.Duration, audience []string) *JWT {
+	return &JWT{
+		privateKey,
+		publicKey,
+		accessToken,
+		refreshToken,
+		issuer, audience,
+	}
 }
 
-func NewJWTGenerator(certPath, issuer string, accessToken, refreshToken time.Duration, audience []string) (*JWT, error) {
+func NewJWTGeneratorWithPrivateKey(privateKey *rsa.PrivateKey, issuer string, accessToken, refreshToken time.Duration, audience []string) *JWT {
+	return &JWT{
+		privateKey,
+		nil,
+		accessToken,
+		refreshToken,
+		issuer,
+		audience,
+	}
+}
+
+func NewJWTGeneratorWithPublicKey(publicKey *rsa.PublicKey, issuer string, accessToken, refreshToken time.Duration, audience []string) *JWT {
+	return &JWT{
+		nil,
+		publicKey,
+		accessToken,
+		refreshToken,
+		issuer,
+		audience,
+	}
+}
+
+func (j *JWT) LoadPrivateKeyFromFile(certPath string) (*rsa.PrivateKey, error) {
 	keyData, err := os.ReadFile(certPath)
 	if err != nil {
 		return nil, err
@@ -37,35 +66,70 @@ func NewJWTGenerator(certPath, issuer string, accessToken, refreshToken time.Dur
 	if err != nil {
 		return nil, err
 	}
-	return &JWT{privateKey, accessToken, refreshToken, issuer, audience}, nil
+
+	j.privateKey = privateKey
+	return privateKey, nil
 }
 
-func NewJWTGeneratorWithPrivateKey(privateKey *rsa.PrivateKey, issuer string, accessToken, refreshToken time.Duration, audience []string) (*JWT, error) {
-	return &JWT{privateKey, accessToken, refreshToken, issuer, audience}, nil
-}
-
-func loadPublicKey(filePath string) (*rsa.PublicKey, error) {
-	keyData, err := os.ReadFile(filePath)
+func (j *JWT) LoadPublicKeyFromFile(certPath string) (*rsa.PublicKey, error) {
+	keyData, err := os.ReadFile(certPath)
 	if err != nil {
 		return nil, err
 	}
+
 	publicKey, err := jwt.ParseRSAPublicKeyFromPEM(keyData)
 	if err != nil {
 		return nil, err
 	}
+
+	j.publicKey = publicKey
 	return publicKey, nil
 }
 
-func ValidateJWT(tokenString string, publicKey *rsa.PublicKey) (*jwt.Token, error) {
+func (j *JWT) IsValidJWT(ctx context.Context, tokenString string) (bool, error) {
+	token, err := j.ParseJWT(ctx, tokenString)
+	if err != nil {
+		return false, errors.Wrap(err, "error parsing token")
+	}
+
+	return token.Valid, nil
+}
+
+func (j *JWT) GetClaims(ctx context.Context, tokenString string) (*AuthClaims, error) {
+	token, err := j.ParseJWT(ctx, tokenString)
+	if err != nil {
+		return nil, errors.Wrap(err, "error parsing token")
+	}
+	claims, ok := token.Claims.(*AuthClaims)
+	if !ok || !token.Valid {
+		return nil, errors.Wrap(err, "Token not valid")
+	}
+	return claims, nil
+}
+
+func (j *JWT) ParseJWT(ctx context.Context, tokenString string) (*jwt.Token, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			return nil, errors.Errorf("Unexpected signing method: %v", token.Header["alg"])
 		}
-		return publicKey, nil
-	})
 
+		var key any = j.publicKey
+		if key == nil {
+			key = j.privateKey
+		}
+
+		if key == nil {
+			return nil, errors.Wrap(ErrKeyMissing, "Error validate jwt keys is nil")
+		}
+
+		return key, nil
+	})
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Error validate jwt token")
 	}
 	return token, nil
 }
@@ -73,7 +137,7 @@ func ValidateJWT(tokenString string, publicKey *rsa.PublicKey) (*jwt.Token, erro
 // GenerateAllTokensAsync TODO: а надо ли ? может возвращать структуру с access и refresh токеном|
 //
 //	return array tokens first elem is access token and second if refresh token
-func (j *JWT) GenerateAllTokensAsync(ctx context.Context, uid, role string) ([]string, error) {
+func (j *JWT) GenerateAllTokensAsync(ctx context.Context, uid, role, deviceID string) ([]string, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -84,7 +148,7 @@ func (j *JWT) GenerateAllTokensAsync(ctx context.Context, uid, role string) ([]s
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		access, err := j.GenerateAccessToken(ctx, uid, role)
+		access, err := j.GenerateAccessToken(ctx, uid, role, deviceID)
 		if err != nil {
 			errCh <- errors.Wrap(err, "Error create access token")
 			return
@@ -95,7 +159,7 @@ func (j *JWT) GenerateAllTokensAsync(ctx context.Context, uid, role string) ([]s
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		refresh, err := j.GenerateRefreshToken(ctx, uid, role)
+		refresh, err := j.GenerateRefreshToken(ctx, uid, role, deviceID)
 		if err != nil {
 			errCh <- errors.Wrap(err, "Error create refresh token")
 			return
@@ -121,17 +185,17 @@ func (j *JWT) GenerateAllTokensAsync(ctx context.Context, uid, role string) ([]s
 // GenerateAllTokens TODO: а надо ли ? может возвращать структуру с access и refresh токеном|
 //
 // return array tokens first elem is access token and second if refresh token
-func (j *JWT) GenerateAllTokens(ctx context.Context, uid, role string) ([]string, error) {
+func (j *JWT) GenerateAllTokens(ctx context.Context, uid, role, deviceID string) ([]string, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
 
-	access, err := j.GenerateAccessToken(ctx, uid, role)
+	access, err := j.GenerateAccessToken(ctx, uid, role, deviceID)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error create access token")
 	}
 
-	refresh, err := j.GenerateRefreshToken(ctx, uid, role)
+	refresh, err := j.GenerateRefreshToken(ctx, uid, role, deviceID)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error create refresh token")
 	}
@@ -139,13 +203,14 @@ func (j *JWT) GenerateAllTokens(ctx context.Context, uid, role string) ([]string
 	return []string{access, refresh}, nil
 }
 
-func (j *JWT) GenerateAccessToken(ctx context.Context, uid, role string) (string, error) {
+func (j *JWT) GenerateAccessToken(ctx context.Context, uid, role, deviceID string) (string, error) {
 	if ctx.Err() != nil {
 		return "", ctx.Err()
 	}
 
 	claims := AuthClaims{
-		Role: role,
+		DeviceID: deviceID,
+		Role:     role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    j.issuer,
 			Subject:   uid,
@@ -161,13 +226,14 @@ func (j *JWT) GenerateAccessToken(ctx context.Context, uid, role string) (string
 	return signedToken, err
 }
 
-func (j *JWT) GenerateRefreshToken(ctx context.Context, uid, role string) (string, error) {
+func (j *JWT) GenerateRefreshToken(ctx context.Context, uid, role, deviceID string) (string, error) {
 	if ctx.Err() != nil {
 		return "", ctx.Err()
 	}
 
 	claims := AuthClaims{
-		Role: role,
+		Role:     role,
+		DeviceID: deviceID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    j.issuer,
 			Subject:   uid,
@@ -184,6 +250,9 @@ func (j *JWT) GenerateRefreshToken(ctx context.Context, uid, role string) (strin
 }
 
 func (j *JWT) generateJWT(claims *AuthClaims) (string, error) {
+	if j.privateKey == nil {
+		return "", errors.Wrap(ErrKeyMissing, "Error generate jwt, keys is nil")
+	}
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 	signedToken, err := token.SignedString(j.privateKey)
 	if err != nil {
