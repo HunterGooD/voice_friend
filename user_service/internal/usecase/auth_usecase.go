@@ -96,7 +96,7 @@ func (u *AuthUsecase) LogoutUserUsecase(ctx context.Context, refreshToken string
 		return errors.Wrap(err, "Error verify token")
 	}
 
-	return u.tokenRepo.DeleteRefreshToken(ctx, claims.DeviceID, claims.DeviceID)
+	return u.tokenRepo.DeleteRefreshToken(ctx, claims.Subject, claims.DeviceID)
 }
 
 func (u *AuthUsecase) generateAuthResponse(ctx context.Context, uid, role, deviceID string) (*entity.AuthUserResponse, error) {

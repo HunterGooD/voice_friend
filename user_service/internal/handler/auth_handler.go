@@ -61,7 +61,7 @@ func (h *AuthHandler) Register(ctx context.Context, req *pd.RegisterRequest) (*p
 	if err != nil {
 		if errors.Is(err, entity.ErrUserAlreadyExists) {
 			h.log.Warn("User already exists", map[string]interface{}{
-				"user":  user,
+				"user":  user.UID.String(),
 				"error": err,
 			})
 			return nil, status.Errorf(codes.AlreadyExists, "Request user exists")
@@ -98,7 +98,7 @@ func (h *AuthHandler) Login(ctx context.Context, req *pd.LoginRequest) (*pd.Auth
 	if err != nil {
 		if errors.Is(err, entity.ErrNotFound) {
 			h.log.Warn("User not found", map[string]interface{}{
-				"user":  user,
+				"user":  user.UID.String(),
 				"error": err,
 			})
 			return nil, status.Errorf(codes.NotFound, "Request user not found")

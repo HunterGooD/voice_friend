@@ -18,15 +18,15 @@ func (t TokenManagerAdapter) GenerateAllTokensAsync(ctx context.Context, uid, ro
 	return t.jwt.GenerateAllTokensAsync(ctx, uid, role, deviceID)
 }
 
-func (t TokenManagerAdapter) GenerateAllTokens(ctx context.Context, uid string, role, deviceID string) ([]string, error) {
+func (t TokenManagerAdapter) GenerateAllTokens(ctx context.Context, uid, role, deviceID string) ([]string, error) {
 	return t.jwt.GenerateAllTokens(ctx, uid, role, deviceID)
 }
 
-func (t TokenManagerAdapter) GenerateAccessToken(ctx context.Context, uid string, role, deviceID string) (string, error) {
+func (t TokenManagerAdapter) GenerateAccessToken(ctx context.Context, uid, role, deviceID string) (string, error) {
 	return t.jwt.GenerateAccessToken(ctx, uid, role, deviceID)
 }
 
-func (t TokenManagerAdapter) GenerateRefreshToken(ctx context.Context, uid string, role, deviceID string) (string, error) {
+func (t TokenManagerAdapter) GenerateRefreshToken(ctx context.Context, uid, role, deviceID string) (string, error) {
 	return t.jwt.GenerateRefreshToken(ctx, uid, role, deviceID)
 }
 

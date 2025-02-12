@@ -19,9 +19,9 @@ type TokenRepository interface {
 
 type TokenManager interface {
 	GenerateAllTokensAsync(ctx context.Context, uid, role, deviceID string) ([]string, error)
-	GenerateAllTokens(ctx context.Context, uid string, role, deviceID string) ([]string, error)
-	GenerateAccessToken(ctx context.Context, uid string, role, deviceID string) (string, error)
-	GenerateRefreshToken(ctx context.Context, uid string, role, deviceID string) (string, error)
+	GenerateAllTokens(ctx context.Context, uid, role, deviceID string) ([]string, error)
+	GenerateAccessToken(ctx context.Context, uid, role, deviceID string) (string, error)
+	GenerateRefreshToken(ctx context.Context, uid, role, deviceID string) (string, error)
 	GetClaims(ctx context.Context, tokenString string) (*entity.AuthClaims, error)
 }
 
