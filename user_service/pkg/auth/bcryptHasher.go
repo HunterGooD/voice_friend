@@ -31,5 +31,5 @@ func (bc *BcryptHasher) CheckPassword(password, hashedPassword string) (bool, er
 		}
 		return false, errors.Wrap(err, "errors check password")
 	}
-	return err == nil, nil
+	return true, nil
 }

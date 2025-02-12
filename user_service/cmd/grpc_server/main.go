@@ -1,11 +1,12 @@
 package main
 
 import (
+	"github.com/HunterGooD/voice_friend/user_service/internal/adapter"
+	auth2 "github.com/HunterGooD/voice_friend/user_service/pkg/auth"
 	"os"
 	"time"
 
 	"github.com/HunterGooD/voice_friend/user_service/config"
-	"github.com/HunterGooD/voice_friend/user_service/internal/auth"
 	"github.com/HunterGooD/voice_friend/user_service/internal/handler"
 	"github.com/HunterGooD/voice_friend/user_service/internal/repository"
 	"github.com/HunterGooD/voice_friend/user_service/internal/usecase"
@@ -17,7 +18,7 @@ import (
 func main() {
 	// load config
 	log := logger.NewJsonLogrusLogger(os.Stdout, os.Getenv("LOG_LEVEL"))
-	//log := logger.NewJsonSlogLogger(os.Stdout, os.Getenv("LOG_LEVEL"))
+
 	configPath := os.Getenv("CONFIG_PATH")
 	cfg, err := config.NewConfig(configPath)
 	if err != nil {
@@ -32,29 +33,46 @@ func main() {
 		cfg.Database.PoolConnection.MaxLifeTime,
 	)
 	if err != nil {
-		log.Error("Error init database", err)
+		log.Error("Error init postgresql database", err)
+		panic(err)
+	}
+
+	conn, err := database.NewRedisConn(cfg.GetRedisAddr(), cfg.Redis.User, cfg.Redis.Password, cfg.Redis.DBIdx)
+	if err != nil {
+		log.Error("Error init redis", err)
 		panic(err)
 	}
 
 	userRepository := repository.NewUserRepository(db)
+	tokenRepository := repository.NewTokenRepository(conn)
 
-	tokenManager, err := auth.NewJWTGenerator(
-		cfg.App.CertFilePath,
+	tokenManager := auth2.NewJWTGenerator(
+		nil,
+		nil,
 		cfg.JWT.Issuer,
 		cfg.JWT.AccessTokenDuration,
 		cfg.GetRefreshTokenTime(),
 		[]string{""},
 	)
+
+	_, err = tokenManager.LoadPrivateKeyFromFile(cfg.App.CertFilePath)
 	if err != nil {
-		log.Error("Error init token manager", err)
+		log.Error("Error load private key for token manager", err)
 		panic(err)
 	}
 
-	// TODO: to config params
-	hasher := auth.NewArgon2Hasher(3, 64*1024, 32, 16, 2)
+	tokenAdapter := adapter.NewTokenManagerAdapter(tokenManager)
 
-	authUsecase := usecase.NewAuthUsecase(userRepository, tokenManager, hasher, log)
-	userProfileUsecase := usecase.NewUserProfileUsecase(userRepository, tokenManager, log)
+	hasher := auth2.NewArgon2Hasher(
+		cfg.Argon2.Times,
+		cfg.Argon2.Memory*1024,
+		cfg.Argon2.KeyLen,
+		cfg.Argon2.SaltLen,
+		cfg.Argon2.Threads,
+	)
+
+	authUsecase := usecase.NewAuthUsecase(userRepository, tokenRepository, tokenAdapter, hasher)
+	userProfileUsecase := usecase.NewUserProfileUsecase(userRepository, tokenAdapter, log)
 
 	// init gRPC server
 	gRPCServer := server.NewGRPCServer(log, 5, time.Duration(30)*time.Second)

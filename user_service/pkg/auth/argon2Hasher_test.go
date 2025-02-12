@@ -1,7 +1,7 @@
 package auth_test
 
 import (
-	"github.com/HunterGooD/voice_friend/user_service/internal/auth"
+	"github.com/HunterGooD/voice_friend/user_service/pkg/auth"
 	"strings"
 	"testing"
 

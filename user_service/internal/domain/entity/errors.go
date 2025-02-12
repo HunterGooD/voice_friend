@@ -10,5 +10,4 @@ var (
 	ErrUnauthorized      = errors.New("unauthorization user")
 	ErrDataNotValid      = errors.New("not valid user data")
 	ErrInvalidPassword   = errors.New("invalid password")
-	ErrInternal          = errors.New("unexpected error")
 )

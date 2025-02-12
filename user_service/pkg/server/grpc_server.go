@@ -32,7 +32,7 @@ func NewGRPCServer(log logger.Logger, retriesCount int, timeout time.Duration) *
 	}
 	loggingOpts := []grpclog.Option{
 		grpclog.WithLogOnEvents(
-			//grpclog.StartCall, grpclog.FinishCall,
+			// grpclog.StartCall, grpclog.FinishCall,
 			grpclog.PayloadReceived, grpclog.PayloadSent,
 		),
 	}
