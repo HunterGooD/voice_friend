@@ -3,9 +3,6 @@ package usecase
 import (
 	"context"
 	"github.com/HunterGooD/voice_friend/user_service/internal/domain/entity"
-	// TODO: избавиться от зависимостей
-	auth2 "github.com/HunterGooD/voice_friend/user_service/pkg/auth"
-	"time"
 )
 
 type UserRepository interface {
@@ -25,14 +22,7 @@ type TokenManager interface {
 	GenerateAllTokens(ctx context.Context, uid string, role, deviceID string) ([]string, error)
 	GenerateAccessToken(ctx context.Context, uid string, role, deviceID string) (string, error)
 	GenerateRefreshToken(ctx context.Context, uid string, role, deviceID string) (string, error)
-	GetClaims(ctx context.Context, tokenString string) (*auth2.AuthClaims, error)
-}
-
-type AuthClaims interface {
-	GetUID() string
-	GetDeviceId() string
-	GetExpireTime() time.Time
-	GetRole() string
+	GetClaims(ctx context.Context, tokenString string) (*entity.AuthClaims, error)
 }
 
 type HashManager interface {

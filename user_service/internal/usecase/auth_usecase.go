@@ -64,13 +64,13 @@ func (u *AuthUsecase) UpdateAccessTokenUsecase(ctx context.Context, refreshToken
 	if err != nil {
 		return nil, errors.Wrap(err, "Error verify token")
 	}
-	expTime := claims.GetExpireTime()
+	expTime := claims.ExpireTime
 	timeUntilExp := expTime.Sub(time.Now())
 	if timeUntilExp <= 3*24*time.Hour {
-		return u.generateAuthResponse(ctx, claims.GetUID(), claims.GetRole(), claims.GetDeviceId())
+		return u.generateAuthResponse(ctx, claims.Subject, claims.Role, claims.DeviceID)
 	}
 
-	accessToken, err := u.tokenMng.GenerateAccessToken(ctx, claims.GetUID(), claims.GetRole(), claims.GetDeviceId())
+	accessToken, err := u.tokenMng.GenerateAccessToken(ctx, claims.Subject, claims.Role, claims.DeviceID)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error generate access token")
 	}
@@ -87,7 +87,7 @@ func (u *AuthUsecase) UpdateRefreshTokenUsecase(ctx context.Context, refreshToke
 		return nil, errors.Wrap(err, "Error verify token")
 	}
 
-	return u.generateAuthResponse(ctx, claims.GetUID(), claims.GetRole(), claims.GetDeviceId())
+	return u.generateAuthResponse(ctx, claims.Subject, claims.Role, claims.DeviceID)
 }
 
 func (u *AuthUsecase) LogoutUserUsecase(ctx context.Context, refreshToken string) error {
@@ -96,7 +96,7 @@ func (u *AuthUsecase) LogoutUserUsecase(ctx context.Context, refreshToken string
 		return errors.Wrap(err, "Error verify token")
 	}
 
-	return u.tokenRepo.DeleteRefreshToken(ctx, claims.GetUID(), claims.GetDeviceId())
+	return u.tokenRepo.DeleteRefreshToken(ctx, claims.DeviceID, claims.DeviceID)
 }
 
 func (u *AuthUsecase) generateAuthResponse(ctx context.Context, uid, role, deviceID string) (*entity.AuthUserResponse, error) {

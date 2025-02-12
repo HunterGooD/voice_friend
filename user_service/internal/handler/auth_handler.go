@@ -5,6 +5,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/HunterGooD/voice_friend/user_service/internal/domain/entity"
+	// TODO: domain interface
 	"github.com/HunterGooD/voice_friend/user_service/pkg/logger"
 	"github.com/HunterGooD/voice_friend/user_service/pkg/utils"
 	pd "github.com/HunterGooD/voice_friend_contracts/gen/go/user_service"
@@ -17,6 +18,8 @@ type AuthUsecase interface {
 	RegisterUserUsecase(ctx context.Context, user *entity.User, deviceID string) (*entity.AuthUserResponse, error)
 	LoginUserUsecase(ctx context.Context, user *entity.User, deviceID string) (*entity.AuthUserResponse, error)
 	LogoutUserUsecase(ctx context.Context, refreshToken string) error
+	UpdateRefreshTokenUsecase(ctx context.Context, refreshToken string) (*entity.AuthUserResponse, error)
+	UpdateAccessTokenUsecase(ctx context.Context, refreshToken string) (*entity.AuthUserResponse, error)
 }
 
 type GRPCServer interface {
@@ -131,11 +134,25 @@ func (h *AuthHandler) validator(email, phone *string) error {
 }
 
 func (h *AuthHandler) UpdateAccessToken(ctx context.Context, req *pd.RefreshToken) (*pd.AuthResponse, error) {
-	return nil, nil
+	res, err := h.authUsecase.UpdateAccessTokenUsecase(ctx, req.Token)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Internal error %v", err)
+	}
+	return &pd.AuthResponse{
+		AccessToken:  res.AccessToken,
+		RefreshToken: res.RefreshToken,
+	}, nil
 }
 
 func (h *AuthHandler) UpdateRefreshToken(ctx context.Context, req *pd.RefreshToken) (*pd.AuthResponse, error) {
-	return nil, nil
+	res, err := h.authUsecase.UpdateRefreshTokenUsecase(ctx, req.Token)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Internal error %v", err)
+	}
+	return &pd.AuthResponse{
+		AccessToken:  res.AccessToken,
+		RefreshToken: res.RefreshToken,
+	}, nil
 }
 
 func (h *AuthHandler) LogOut(ctx context.Context, req *pd.LogoutRequest) (*pd.LogoutResponse, error) {

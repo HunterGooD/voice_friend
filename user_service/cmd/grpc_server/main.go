@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/HunterGooD/voice_friend/user_service/internal/adapter"
 	auth2 "github.com/HunterGooD/voice_friend/user_service/pkg/auth"
 	"os"
 	"time"
@@ -60,6 +61,8 @@ func main() {
 		panic(err)
 	}
 
+	tokenAdapter := adapter.NewTokenManagerAdapter(tokenManager)
+
 	hasher := auth2.NewArgon2Hasher(
 		cfg.Argon2.Times,
 		cfg.Argon2.Memory*1024,
@@ -68,8 +71,8 @@ func main() {
 		cfg.Argon2.Threads,
 	)
 
-	authUsecase := usecase.NewAuthUsecase(userRepository, tokenRepository, tokenManager, hasher)
-	userProfileUsecase := usecase.NewUserProfileUsecase(userRepository, tokenManager, log)
+	authUsecase := usecase.NewAuthUsecase(userRepository, tokenRepository, tokenAdapter, hasher)
+	userProfileUsecase := usecase.NewUserProfileUsecase(userRepository, tokenAdapter, log)
 
 	// init gRPC server
 	gRPCServer := server.NewGRPCServer(log, 5, time.Duration(30)*time.Second)
