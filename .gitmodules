@@ -1,3 +1,12 @@
 [submodule "contracts"]
 	path = contracts
 	url = https://github.com/HunterGooD/voice_friend_contracts
+[submodule "user_service"]
+	path = user_service
+	url = https://github.com/HunterGooD/voice_friend_user_service
+[submodule "webrtc_service"]
+	path = webrtc_service
+	url = https://github.com/HunterGooD/voice_friend_webrtc_service
+[submodule "api_gateway"]
+	path = api_gateway
+	url = https://github.com/HunterGooD/voice_friend_api_gateway
